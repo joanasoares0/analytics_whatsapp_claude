@@ -15,6 +15,10 @@ const HINTS = {
     "Meta accepts reads from anywhere with it and refuses sends from a datacenter. " +
     "Use a System User token with whatsapp_business_messaging and whatsapp_business_management.",
   131030: "The destination number is not on Meta's test recipient list. Add it in the app dashboard.",
+  133010:
+    "The sending number was never registered with the Cloud API — it is still PENDING. " +
+    "Send one message from WhatsApp > API Setup in the dashboard, or POST to " +
+    "/v21.0/<phone-number-id>/register with {messaging_product:'whatsapp', pin:'000000'}.",
   131047: "The 24h window is closed: the owner has to send a message before the agent can reply freely.",
   190: "The access token expired or was revoked. Issue a new System User token.",
 };

@@ -282,6 +282,9 @@ node scripts/smoke.mjs
 | The webhook receives, but nothing arrives on the phone | The 24h window is closed | The owner has to send a message first. In the normal flow this is automatic: they always ask something first |
 | Production answers "no database access" | An out-of-date variable in the Netlify dashboard | Update `SUPABASE_DB_URL` in Netlify and **redeploy** |
 | Error `#131030` when sending | The destination number is not authorized | Add your number to Meta's test list |
+| Error `#133010 Account not registered` when sending | The sending number was never registered with the Cloud API — `GET /v21.0/<phone-number-id>` shows `status: PENDING` | Send one message from WhatsApp → API Setup, or `POST /v21.0/<phone-number-id>/register` with `{messaging_product, pin}` |
+| Netlify build fails on "Secret env var OPENAI_MODEL's value detected" | Netlify treats every environment variable as a secret, and the model id is in the code as a default | `SECRETS_SCAN_OMIT_KEYS = "OPENAI_MODEL"` in `netlify.toml`, already there |
+| Meta cannot verify the webhook, and the URL answers `401 Login Redirect` | The Netlify project's visibility is Private, so nothing public reaches it | Site configuration → Visitor access → Production visibility: Public |
 | A number shows up twice in the donut | QuickChart v4 turns `datalabels` on by default | Already turned off in `charts.mjs` |
 | The gauge does not render | QuickChart only draws a gauge on Chart.js **v2** | The `gauge` uses `v=2`; the others use `v=4` |
 | An absurd drop on a question about "this month" | Comparing a partial month against a whole previous month | The same-size window rule, in the prompt |
