@@ -1,0 +1,21 @@
+{
+  "name": "analytics-whatsapp-claude",
+  "version": "0.1.0",
+  "description": "Business analysis over WhatsApp: an AI agent that writes its own SQL, picks its own chart, and answers the business owner on their phone",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "ask": "node ask.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "permissions": "node scripts/permission_proof.mjs",
+    "send": "node scripts/send_test.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.68.0",
+    "pg": "^8.13.0"
+  }
+}

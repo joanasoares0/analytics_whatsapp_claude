@@ -99,7 +99,8 @@ src/
   agent.mjs            system prompt + tool-use loop   ← the behavior lives here
   db.mjs               Postgres, SELECT only, with retry
   charts.mjs           Chart.js → PNG from QuickChart
-  whatsapp.mjs         sending through the Meta Cloud API
+  whatsapp.mjs         sending through the Meta Cloud API + toWhatsApp()
+  env.mjs              loads .env, and ends the CLI scripts cleanly
 netlify/functions/
   whatsapp-webhook.mjs      receives, validates, delegates
   respond-background.mjs    runs the analysis and answers
@@ -108,6 +109,8 @@ scripts/
   smoke.mjs             sanity: database + the chart types
   send_test.mjs         question → agent → WhatsApp
 ask.mjs                 CLI: shows the SQL the agent wrote and the cost
+netlify.toml            build and functions config
+package.json            Node dependencies and npm scripts
 .env                    credentials (outside Git)
 .env.example            the same variables, empty, versioned
 ```
@@ -184,6 +187,13 @@ The gauge takes a single item and always comes before the bars.
 **Answer format:** four blocks — a headline carrying the insight (not the
 subject), two lines of analysis, 3 to 4 bullets, a recommendation. At most two
 emojis, one in the headline and one in the action.
+
+**The contract guard.** Before the loop accepts a final answer, it checks what
+the agent *did*: at least two queries, a breakdown, and a chart of that
+breakdown. Anything missing and it pushes the agent back to work, at most twice.
+This is rule 2, not routing — it never looks at the words of the question, only
+at the agent's own process. The wording of the demand lives in
+`missingFromContract()` in `src/agent.mjs`.
 
 **Cost:** each question turns into 3 to 6 model calls. Measure your real cost
 with `ask.mjs`, which prints the cost per run, and tune the model in

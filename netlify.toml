@@ -1,0 +1,14 @@
+# Netlify configuration.
+#
+# The two functions are deliberately split: whatsapp-webhook answers Meta within
+# a couple of seconds, and respond-background does the 8-15 second analysis.
+# Netlify turns a function into a background one by its name alone — the
+# `-background` suffix is what buys the 15 minute ceiling, so do not rename it.
+
+[build]
+  command = "npm install"
+  functions = "netlify/functions"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
