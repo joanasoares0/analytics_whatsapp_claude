@@ -25,19 +25,33 @@ if (!question) {
   process.exit(1);
 }
 
-const compact = (sql) => sql.replace(/\s+/g, " ").trim();
+// The SQL is the point of this CLI: it is how you check the answer instead of
+// believing it. So it is printed the way you would read it, not the way the
+// model happened to type it.
+const KEYWORDS = /\b(with|select|from|where|group by|having|order by|limit|union all|union)\b/gi;
+
+function formatSql(sql) {
+  const oneLine = sql.replace(/\s+/g, " ").trim().replace(/;$/, "");
+  return oneLine
+    .replace(KEYWORDS, (word) => `\n${word.toLowerCase()}`)
+    .replace(/,(?=\s*(?:coalesce|sum|count|avg|round|case|extract)\b)/gi, ",\n      ")
+    .split("\n")
+    .map((line, index) => (index === 0 ? line.trim() : `      ${line.trim()}`))
+    .filter(Boolean)
+    .join("\n");
+}
 
 function onStep(step) {
   if (step.type === "query") {
-    console.log(`${DIM}sql${OFF}   ${compact(step.sql)}`);
-    console.log(`${DIM}      ${step.rowCount} row(s)${OFF}`);
+    console.log(`${DIM}sql${OFF}   ${formatSql(step.sql)}`);
+    console.log(`${DIM}      → ${step.rowCount} row(s)${OFF}\n`);
   } else if (step.type === "chart") {
     console.log(`${DIM}chart${OFF} ${step.chartType} — ${step.title}`);
   } else if (step.type === "error") {
     console.log(`${DIM}error${OFF} ${step.tool}: ${step.message}`);
-    if (step.sql) console.log(`${DIM}      ${compact(step.sql)}${OFF}`);
+    if (step.sql) console.log(`${DIM}      ${formatSql(step.sql)}${OFF}`);
   } else if (step.type === "repeat") {
-    console.log(`${DIM}repeat${OFF} same query again — served from the first run`);
+    console.log(`${DIM}repeat${OFF} same query again — served from the first run\n`);
   } else if (step.type === "nudge") {
     console.log(`${DIM}nudge${OFF} ${step.message}`);
   }
