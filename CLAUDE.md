@@ -210,7 +210,9 @@ module that uses it and in the Netlify dashboard too.
 # ---------- Database (Supabase) ----------
 # Read-only user, with SELECT only on the views. Never use the superuser.
 # A password with @ : / ? # breaks the URL — use percent-encoding (# becomes %23, @ becomes %40).
-SUPABASE_DB_URL=postgresql://<user>:<password>@<host>:<port>/postgres
+# In production this MUST be the pooler: the direct host is IPv6-only and a
+# Netlify function cannot resolve it at all.
+SUPABASE_DB_URL=postgresql://<user>.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
 
 # Administrator connection, used ONLY by db/scripts/db_setup.py to build the database.
 # On Supabase this is the `postgres` user. The agent never sees it.
@@ -277,7 +279,8 @@ node scripts/smoke.mjs
 |---|---|---|
 | `403 (#131005) Access denied` when sending, while reading works | The temporary token from the "Try it" screen is a **user** token: Meta accepts reads from anywhere and refuses writes coming from a datacenter | A **System User** token, with `whatsapp_business_messaging` and `whatsapp_business_management` |
 | Database connection error (password) | A password with special characters (`# @ : / ?`) breaks the URL | Percent-encoding: `#` becomes `%23`, `@` becomes `%40` |
-| Database connection refused | Wrong port/host | A direct connection uses port 5432 (host `db.<ref>.supabase.co`); the pooler uses 6543 (host `...pooler.supabase.com`, user `<user>.<ref>`). In serverless, prefer the pooler |
+| Database connection refused | Wrong port/host | A direct connection uses port 5432 (host `db.<ref>.supabase.co`); the pooler uses 6543 (host `aws-0-<region>.pooler.supabase.com`, user `<user>.<ref>`) |
+| `getaddrinfo ENOTFOUND db.<ref>.supabase.co` from a deployed function, while the same URL works on your machine | The direct host resolves over IPv6 only (`AAAA`, no `A` record). Your laptop has IPv6; Netlify's functions run on IPv4, so the name does not resolve at all | Use the pooler in production: `postgresql://<user>.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres`. Note the user carries the project ref. Then redeploy — `/.netlify/functions/db-check?token=…` confirms it |
 | The webhook answers 200 and nothing happens | The delegating `fetch` has no `await`: the runtime freezes on return and the request never goes out | Keep the `await` on the delegation |
 | The webhook receives, but nothing arrives on the phone | The 24h window is closed | The owner has to send a message first. In the normal flow this is automatic: they always ask something first |
 | Production answers "no database access" | An out-of-date variable in the Netlify dashboard | Update `SUPABASE_DB_URL` in Netlify and **redeploy** |
