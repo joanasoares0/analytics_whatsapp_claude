@@ -10,5 +10,14 @@
   functions = "netlify/functions"
   publish = "public"
 
+[build.environment]
+  # Netlify's secrets scanner treats every environment variable as a secret and
+  # fails the build when it finds its value in the repo. OPENAI_MODEL is a model
+  # id, not a credential: it is in src/agent.mjs as the default and in the price
+  # table, and in .env.example as documentation. Exempt that one key only —
+  # OPENAI_API_KEY, SUPABASE_DB_URL and the WhatsApp token stay scanned, and
+  # should keep failing the build if they ever reach a tracked file.
+  SECRETS_SCAN_OMIT_KEYS = "OPENAI_MODEL"
+
 [functions]
   node_bundler = "esbuild"
