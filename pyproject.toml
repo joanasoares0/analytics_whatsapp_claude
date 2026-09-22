@@ -1,0 +1,10 @@
+[project]
+name = "analytics-whatsapp-claude"
+version = "0.1.0"
+description = "Business analysis over WhatsApp: an AI agent that writes its own SQL, picks its own chart, and answers the business owner on their phone"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.0",
+]
