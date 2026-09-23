@@ -337,12 +337,3 @@ touch:
 > The golden rule when adapting: **the behavior lives in the prompt and in the
 > data, not in `if`s.** If the agent gets something wrong, fix the description of
 > the views or the system prompt — never build keyword routing.
-
----
-
-## Next steps (ideas)
-
-- [ ] Memory per phone number
-- [ ] Deduplication by `message_id`
-- [ ] New chart types
-- [ ] Proactive alerts (the agent speaks up without being asked)

@@ -155,6 +155,9 @@ the suggestions worth starting from:
   what each one may see — enforced in the database, with one read-only user per
   access level, never in the prompt. Then memory per phone number, and capacity
   planned from the cost per question that `ask.mjs` measures.
+- **Ideas for the agent itself:** new chart types, and proactive alerts — the
+  agent speaking up without being asked, which on WhatsApp means pre-approved
+  message templates, since it would be writing outside the 24h window.
 
 ## Known limits
 
