@@ -133,7 +133,7 @@ API:
 4. Check that production reaches the database:
    `/.netlify/functions/db-check?token=<WHATSAPP_VERIFY_TOKEN>`.
 
-Every variable, and each error hit on the way, is in [`CLAUDE.md`](CLAUDE.md).
+Every variable and the known pitfalls are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Project status
 
@@ -144,22 +144,27 @@ test number and on the fictional dataset.
 
 ## Beyond the demo
 
-What it would take to answer a real business, and more than one person, is
-written down in [`CLAUDE.md`](CLAUDE.md) under *Taking it to production* and
-*Opening it to more users*. In short:
+This is a portfolio demo, and it stays one. If you take it further, these are
+the suggestions worth starting from:
 
-- **Production:** business verification and a number of your own, a token that
-  never expires, a webhook that refuses unsigned requests, deduplication by
-  `message_id`, spend limits and logging, and the views pointed at real data.
-- **More users:** an allowlist of who may ask, and permissions enforced in the
-  database — one read-only user per access level — never in the prompt. Then
-  memory per number, and capacity planned from the measured cost per question.
+- **To answer a real business:** business verification on Meta and a number of
+  your own, a System User token that never expires, deduplication by
+  `message_id`, spend limits and logging, and the views pointed at real data
+  through a read-only user.
+- **To let more people ask:** decide who may ask (see *Known limits* below), and
+  what each one may see — enforced in the database, with one read-only user per
+  access level, never in the prompt. Then memory per phone number, and capacity
+  planned from the cost per question that `ask.mjs` measures.
 
 ## Known limits
 
 - **Anyone who messages the number gets an answer**, about all of the data.
-  Harmless with a test number limited to 5 recipients; the first thing to fix
-  before opening it up.
+  Harmless here: Meta's test number only talks to 5 authorized recipients. With
+  a number of your own, check the sender in `whatsapp-webhook.mjs` against a
+  list of authorized numbers before delegating — unknown numbers get a silent
+  `200`, so they cost nothing and Meta does not retry — and make the signature
+  check refuse requests when `WHATSAPP_APP_SECRET` is missing, since the sender
+  comes from the request body and is only trustworthy once the signature is.
 - **No memory.** Each message stands alone. "And Bruno?" works because the name
   is in the data; "and him?" as a follow-up does not.
 - **No deduplication.** If Meta resends a webhook, the agent answers twice.
@@ -169,8 +174,8 @@ written down in [`CLAUDE.md`](CLAUDE.md) under *Taking it to production* and
 ## Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) — how the project works end to end: architecture,
-  layout, environment variables, known pitfalls, how to adapt it to your own
-  data, and what production and more users would take.
+  layout, environment variables, known pitfalls, and how to adapt it to your
+  own data.
 - [`agent.md`](agent.md) — what the agent analyses and what it draws: the
   answer contract, the mandatory queries, the chart rules and the message
   format.
