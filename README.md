@@ -142,6 +142,32 @@ the agent running on Netlify, reading the Supabase views through the read-only
 user, with the text and the chart back on WhatsApp. It still runs on Meta's
 test number and on the fictional dataset.
 
+## Adapting it to your own data
+
+To wire the agent to your own database instead of the demo, this is what you
+touch:
+
+1. **The connection string** (`SUPABASE_DB_URL`): point it at your database and
+   at a **read-only** user you created, the way `db/04_role.sql` does it.
+2. **The views** (`db/03_views.sql`): swap in your own. The agent reads the
+   column names from your database, so keep them clear. If you change the
+   columns, update the description of the views in `CLAUDE.md` too, because
+   that is where the agent's domain is written down.
+3. **"What the database does not have"** (in `CLAUDE.md` and in the system
+   prompt): list what *your* database does not cover. It is what stops the
+   agent from inventing an answer for something that does not exist.
+4. **The system prompt** (`src/agent.mjs`): adjust the business context, the
+   names of salespeople, regions and products, and the tone of the answer.
+5. **The regression questions** (rule 3 in `CLAUDE.md`): swap in the two
+   questions that best represent your case, and run them whenever you touch the
+   prompt.
+6. **The model** (`OPENAI_MODEL`): pick it by cost and quality, measured with
+   `ask.mjs`.
+
+The golden rule: **the behavior lives in the prompt and in the data, not in
+`if`s.** If the agent gets something wrong, fix the description of the views or
+the system prompt — never build keyword routing.
+
 ## Beyond the demo
 
 This is a portfolio demo, and it stays one. If you take it further, these are
@@ -177,8 +203,7 @@ the suggestions worth starting from:
 ## Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) — how the project works end to end: architecture,
-  layout, environment variables, known pitfalls, and how to adapt it to your
-  own data.
+  layout, environment variables and known pitfalls.
 - [`agent.md`](agent.md) — what the agent analyses and what it draws: the
   answer contract, the mandatory queries, the chart rules and the message
   format.

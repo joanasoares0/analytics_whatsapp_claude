@@ -9,9 +9,8 @@ Netlify Functions · Meta Cloud API · QuickChart
 
 > This is a reference `CLAUDE.md`. It describes how the project works so that
 > Claude Code understands the context on its own when it opens the folder. Fill
-> in the fields marked `<...>` with your own values. The **"Adapting it to your
-> own scenario"** section, at the end, lists what to swap if you go beyond the
-> demo.
+> in the fields marked `<...>` with your own values. What to swap to point it at
+> your own data is in the README, under **"Adapting it to your own data"**.
 
 ---
 
@@ -310,30 +309,3 @@ node scripts/smoke.mjs
 - **Meta's message cost:** the free-form answer inside the 24h window may be
   charged depending on the policy in force and the country. Check Meta's current
   table before going to production.
-
----
-
-## Adapting it to your own scenario
-
-If you go beyond the demo and wire the agent to your own data, this is what you
-touch:
-
-1. **The connection string** (`SUPABASE_DB_URL`): point it at your database and
-   at a **read-only** user you created.
-2. **The views** (`db/03_views.sql`): swap in your own. The agent reads the
-   column names from your database — keep the names clear. If you change the
-   columns, update the description of the views in this file, because this is
-   where the agent learns the domain.
-3. **The "What the database does not have" section**: list what YOUR database
-   does not cover. It is what stops the agent from inventing an answer for
-   something that does not exist.
-4. **The system prompt** (`src/agent.mjs`): adjust the business context, the
-   names of salespeople/regions/products and the tone of the answer.
-5. **The regression questions** (rule 3 above): swap in the two questions that
-   best represent your case, and use them whenever you touch the prompt.
-6. **The model** (`OPENAI_MODEL`): pick it by cost and quality. Measure with
-   `ask.mjs`.
-
-> The golden rule when adapting: **the behavior lives in the prompt and in the
-> data, not in `if`s.** If the agent gets something wrong, fix the description of
-> the views or the system prompt — never build keyword routing.
