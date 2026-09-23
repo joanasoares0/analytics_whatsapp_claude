@@ -227,6 +227,10 @@ AGENT_DB_PASSWORD=<strong-password>
 OPENAI_API_KEY=<your-key>
 # Optional: swaps the model without touching the code.
 OPENAI_MODEL=<model>
+# Optional: an OpenAI-compatible endpoint instead of OpenAI's own.
+OPENAI_BASE_URL=
+# Optional, gpt-5 family only: minimal | low | medium | high.
+OPENAI_REASONING_EFFORT=
 
 # ---------- Meta Cloud API (WhatsApp) ----------
 # A secret phrase YOU make up and repeat in Meta's webhook dashboard.
