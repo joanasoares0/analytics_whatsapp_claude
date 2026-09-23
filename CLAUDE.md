@@ -104,6 +104,10 @@ src/
 netlify/functions/
   whatsapp-webhook.mjs      receives, validates, delegates
   respond-background.mjs    runs the analysis and answers
+  db-check.mjs              guarded endpoint: does production reach the database?
+public/
+  index.html           placeholder — the site only exists to host the functions
+  privacy.html         privacy policy, required by Meta to publish the app
 scripts/
   permission_proof.mjs  shows the database refusing writes and reads outside the views
   smoke.mjs             sanity: database + the chart types
@@ -336,8 +340,142 @@ touch:
 
 ---
 
+## Taking it to production
+
+The demo runs end to end, but on training wheels: a test number, fictional data,
+one person asking. This is what changes before it answers a real business.
+
+### The WhatsApp side (Meta)
+
+1. **Business verification** of the portfolio in Meta Business (company
+   documents, a website, a domain). Without it there is no production number.
+2. **A number of your own**, not Meta's test one: a line that is not registered
+   on any WhatsApp app, a display name Meta approves, and registration with the
+   Cloud API (`POST /<phone-number-id>/register` with a PIN — skipping it gives
+   `#133010`). This also lifts the 5-recipient limit.
+3. **The app published**, with a privacy policy that names a real contact and a
+   retention period (`public/privacy.html` is the starting point). While the app
+   is unpublished, Meta delivers only the dashboard's test webhooks.
+4. **The app subscribed to the WABA** — `POST /<waba-id>/subscribed_apps`. There
+   is no button for it in the dashboard; without it sending works and receiving
+   silently does not. Check it with a `GET` on the same path: an empty `data`
+   means nobody is listening.
+5. **A System User token that never expires**, generated with an explicit
+   "Never" expiration, and a note of who can rotate it. A token with an expiry
+   takes production down on that date, without warning.
+6. **App Review** only if you serve *other* businesses' WhatsApp accounts (the
+   Tech Provider path). For your own business, it is not needed.
+7. **Pricing**: check Meta's current table for your country. Answers inside the
+   24h window are the cheap case; proactive alerts go outside it and need
+   pre-approved templates.
+
+### The code
+
+1. **Fail closed on the signature.** `verifySignature` in
+   `netlify/functions/whatsapp-webhook.mjs` accepts everything when
+   `WHATSAPP_APP_SECRET` is empty — fine for a demo, an open door in production.
+   Make a missing secret refuse the request.
+2. **Deduplicate by `message_id`.** Meta retries on anything slow or failed, and
+   each retry costs a full analysis and a duplicate message. That needs a small
+   store with write access — a table with its own database user, or Netlify
+   Blobs. **Never** by giving the agent's user write permission (rule 6).
+3. **Limits per number and per day**: questions, model calls, spend. Set a hard
+   usage cap on the model provider's side too, so a loop cannot run up a bill.
+4. **Observability**: log each question with its phone number, the SQL, the
+   duration and the cost (`ask.mjs` already computes it), and alert on
+   `respond-background` failures. Today a failure only shows up as the apology
+   message.
+5. **Regression before every deploy**: the two questions of rule 3, run on the
+   real data, with the expected numbers written down.
+6. **Remove or lock down `db-check`** once production is stable — it is guarded
+   by the verify token, but it is still a window onto the data.
+
+### The data
+
+1. **Views over the real tables**, with real date columns — the `days_ago`
+   trick is for demos only (see "The table stores no date").
+2. **A read-only user per database**, created the way `db/04_role.sql` does it:
+   `SELECT` on the views and nothing else. Keep `statement_timeout` and the row
+   cap in `src/db.mjs`.
+3. **A read replica** if the source is an operational database — an agent
+   writing its own SQL can produce an expensive query.
+4. **The "What the database does not have" section** rewritten for the real
+   base. It is what stops a plausible answer on a false premise.
+5. **The data leaves your infrastructure**: query results go to the model
+   provider. Check its data-processing terms (no training on API data, a DPA)
+   against GDPR/LGPD before sending real business data.
+
+### Operations
+
+- Every variable exists twice — `.env` and Netlify — and a change in Netlify
+  takes effect **only after a new deploy**. A stale deploy once kept rejecting
+  Meta's webhooks with `401 Bad signature` after the secret had been fixed.
+- Check the Netlify plan: background functions, invocation limits and function
+  logs retention vary by plan.
+
+---
+
+## Opening it to more users
+
+Today the webhook answers **anyone** who messages the number, about **all** of
+the data. That is fine with a test number that only 5 people can use; it is the
+first thing to change before more people get access.
+
+### 1. Who may ask: an allowlist
+
+A table of authorized numbers — phone, name, role, active — checked in
+`respond-background` before the agent runs. An unknown number gets a short
+refusal and costs nothing. This is code, not prompt (rule 2): the model must
+never be the one deciding who is allowed in.
+
+### 2. What each one may see: permissions in the database
+
+A salesperson should see their own sales; a regional manager, their region; the
+owner, everything. The rule is the same as rule 6: **enforce it in the database,
+not in the prompt.** A prompt saying "only show Bruno his own data" is a
+request; a user asking cleverly gets around it.
+
+- The simplest safe shape: **one read-only database user per access level**
+  (owner, region, salesperson), each with `SELECT` on views already filtered for
+  that level. The code picks the connection from the allowlist entry; the agent
+  never chooses it.
+- Postgres Row Level Security with a session variable also works, but carefully:
+  `set_config()` is callable from a `SELECT`, so an agent that writes its own
+  SQL can change the variable. If you go that way, set the variable from a
+  role the agent cannot impersonate, or block `set_config` in `checkSql`.
+- The model only ever sees what the connection returns, so it cannot leak what
+  it never received.
+
+### 3. Conversations that remember
+
+With several people asking, "and him?" as a follow-up stops being a curiosity.
+Memory per phone number means storing the last exchanges (again, in a store the
+agent's database user cannot touch) and passing them into the loop. Keep it
+short — a few turns — and expire it: it is also personal data.
+
+### 4. Capacity and cost
+
+- Each question is 3 to 6 model calls. Multiply by users × questions per day
+  and set the budget with `ask.mjs` numbers, not guesses.
+- The Supabase pooler (transaction mode, 6543) is what lets many concurrent
+  functions share few connections; keep `PGPOOL_MAX` low per function.
+- The model provider's rate limits become the ceiling first. Queue or retry with
+  backoff rather than failing the question.
+
+### 5. More than one business
+
+Serving several companies, each with its own data and its own WhatsApp number,
+is a different product: one schema (or database) and one read-only user per
+tenant, the tenant resolved from the receiving `phone_number_id`, and Meta's
+Embedded Signup so each business connects its own number — which is the Tech
+Provider path and does need App Review.
+
+---
+
 ## Next steps (ideas)
 
+- [ ] Allowlist of authorized numbers (see "Opening it to more users")
+- [ ] Fail closed when `WHATSAPP_APP_SECRET` is missing
 - [ ] Memory per phone number
 - [ ] Deduplication by `message_id`
 - [ ] New chart types

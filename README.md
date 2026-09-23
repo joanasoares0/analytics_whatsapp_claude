@@ -115,17 +115,51 @@ node scripts/permission_proof.mjs                 # watch the database refuse wr
 node scripts/smoke.mjs                            # sanity: database + chart types
 ```
 
+## Deploying it
+
+The two functions run on Netlify, wired to a WhatsApp number on the Meta Cloud
+API:
+
+1. Push the repo to GitHub and import it into Netlify — the build settings come
+   from `netlify.toml`. Set the site's visibility to public, or Meta cannot
+   reach the webhook.
+2. Add the runtime variables from `.env` under *Site configuration →
+   Environment variables*, and redeploy after every change: a new value only
+   takes effect on the next deploy.
+3. In Meta for Developers, point the webhook at
+   `https://<your-site>.netlify.app/.netlify/functions/whatsapp-webhook`,
+   subscribe the `messages` field, subscribe the app to the WhatsApp Business
+   account (`POST /<waba-id>/subscribed_apps`) and publish the app.
+4. Check that production reaches the database:
+   `/.netlify/functions/db-check?token=<WHATSAPP_VERIFY_TOKEN>`.
+
+Every variable, and each error hit on the way, is in [`CLAUDE.md`](CLAUDE.md).
+
 ## Project status
 
-Work in progress. The schema, the seed and the two views (`db/01`, `db/02`,
-`db/03`) run clean and their numbers are verified, and the agent's behavior is
-fully specified in [`agent.md`](agent.md). Still to come: the read-only role
-script (`db/04_role.sql`) and the Node implementation described above — `src/`,
-`netlify/functions/`, `scripts/`. The commands in this README document the
-target shape of the project rather than what you can run today.
+Working end to end in production: a question sent from a phone is answered by
+the agent running on Netlify, reading the Supabase views through the read-only
+user, with the text and the chart back on WhatsApp. It still runs on Meta's
+test number and on the fictional dataset.
+
+## Beyond the demo
+
+What it would take to answer a real business, and more than one person, is
+written down in [`CLAUDE.md`](CLAUDE.md) under *Taking it to production* and
+*Opening it to more users*. In short:
+
+- **Production:** business verification and a number of your own, a token that
+  never expires, a webhook that refuses unsigned requests, deduplication by
+  `message_id`, spend limits and logging, and the views pointed at real data.
+- **More users:** an allowlist of who may ask, and permissions enforced in the
+  database — one read-only user per access level — never in the prompt. Then
+  memory per number, and capacity planned from the measured cost per question.
 
 ## Known limits
 
+- **Anyone who messages the number gets an answer**, about all of the data.
+  Harmless with a test number limited to 5 recipients; the first thing to fix
+  before opening it up.
 - **No memory.** Each message stands alone. "And Bruno?" works because the name
   is in the data; "and him?" as a follow-up does not.
 - **No deduplication.** If Meta resends a webhook, the agent answers twice.
@@ -135,8 +169,8 @@ target shape of the project rather than what you can run today.
 ## Documentation
 
 - [`CLAUDE.md`](CLAUDE.md) — how the project works end to end: architecture,
-  layout, environment variables, known pitfalls, and how to adapt it to your
-  own data.
+  layout, environment variables, known pitfalls, how to adapt it to your own
+  data, and what production and more users would take.
 - [`agent.md`](agent.md) — what the agent analyses and what it draws: the
   answer contract, the mandatory queries, the chart rules and the message
   format.
